@@ -41,8 +41,10 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
 
     /** 不能再使用文字匹配的最小版本号 */
     private static final int USE_ID_MIN_VERSION = 700;// 6.3.8 对应code为680,6.3.9对应code为700
+    /** 目前最新版本号 */
+    private static final int USE_ID_NOW_VERSION = 720;// 6.3.11 对应code为720
 
-    private boolean isFirstChecked ;
+    private boolean isFirstChecked = true;
     private PackageInfo mWechatPackageInfo = null;
     private Handler mHandler = null;
 
@@ -89,7 +91,6 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     @Override
     public void onReceiveJob(AccessibilityEvent event) {
         final int eventType = event.getEventType();
-
         //通知栏事件
         if(eventType == AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED) {
             List<CharSequence> texts = event.getText();
@@ -158,6 +159,8 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         if(event == Config.WX_AFTER_OPEN_HONGBAO) { //拆红包
             if (getWechatVersion() < USE_ID_MIN_VERSION) {
                 list = nodeInfo.findAccessibilityNodeInfosByText("拆红包");
+            } else if (getWechatVersion() == USE_ID_NOW_VERSION) {
+                list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/b43");
             } else {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
                     list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/b2c");
@@ -218,9 +221,10 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText("领取红包");
 
         if(list != null && list.isEmpty()) {
+            Log.e("list.isEmpty()","---");
             // 从消息列表查找红包
-            list = nodeInfo.findAccessibilityNodeInfosByText("[微信红包]");
-
+            list = nodeInfo.findAccessibilityNodeInfosByText("微信红包");
+            Log.e("查找-微信红包","---"+list.toString());
             if(list == null || list.isEmpty()) {
                 return;
             }
@@ -233,6 +237,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
                 break;
             }
         } else if(list != null) {
+            Log.e("查找-领取红包","---"+list.toString());
             //最新的红包领起
             for(int i = list.size() - 1; i >= 0; i --) {
                 AccessibilityNodeInfo parent = list.get(i).getParent();
@@ -240,6 +245,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
                     Log.i(TAG, "-->领取红包:" + parent);
                 }
                 if(parent != null) {
+                    Log.e("isFirstChecked","---"+isFirstChecked);
                     if (isFirstChecked){
                         parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                         isFirstChecked = false;
