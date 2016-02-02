@@ -20,6 +20,7 @@ import com.codeboy.qianghongbao.BuildConfig;
 import com.codeboy.qianghongbao.Config;
 import com.codeboy.qianghongbao.QiangHongBaoService;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -44,9 +45,11 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     /** 目前最新版本号 */
     private static final int USE_ID_NOW_VERSION = 720;// 6.3.11 对应code为720
 
-    private boolean isFirstChecked = true;
+    private boolean hasChecked;
     private PackageInfo mWechatPackageInfo = null;
     private Handler mHandler = null;
+
+    private static ArrayList<String> hasCheckedList;
 
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -59,6 +62,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     @Override
     public void onCreateJob(QiangHongBaoService service) {
         super.onCreateJob(service);
+        hasCheckedList = new ArrayList<>();
 
         updatePackageInfo();
 
@@ -103,7 +107,8 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
                     }
                 }
             }
-        } else if(eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+        } else if(eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                || eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
             openHongBao(event);
         }
     }
@@ -119,7 +124,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         Notification notification = (Notification) event.getParcelableData();
         PendingIntent pendingIntent = notification.contentIntent;
 
-        isFirstChecked = true;
+        hasChecked = false;
         try {
             pendingIntent.send();
         } catch (Exception e) {
@@ -135,8 +140,10 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         } else if("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyDetailUI".equals(event.getClassName())) {
             //拆完红包后看详细的纪录界面
             //nonething
-        } else if("com.tencent.mm.ui.LauncherUI".equals(event.getClassName())) {
-            //在聊天界面,去点中红包
+        } else if("com.tencent.mm.ui.LauncherUI".equals(event.getClassName())
+                || "android.widget.ListView".equals(event.getClassName())   //聊天室页
+                || "android.widget.TextView".equals(event.getClassName())) {    //聊天列表页
+            //在聊天列表或聊天界面,去点中红包
             handleChatListHongBao();
         }
     }
@@ -157,15 +164,13 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         List<AccessibilityNodeInfo> list = null;
         int event = getConfig().getWechatAfterOpenHongBaoEvent();
         if(event == Config.WX_AFTER_OPEN_HONGBAO) { //拆红包
-            if (getWechatVersion() < USE_ID_MIN_VERSION) {
+            if (getWechatVersion() < USE_ID_MIN_VERSION) {  //6.3.9 版本下是“拆红包”三个字
                 list = nodeInfo.findAccessibilityNodeInfosByText("拆红包");
-            } else if (getWechatVersion() == USE_ID_NOW_VERSION) {
+            } else if (getWechatVersion() == USE_ID_NOW_VERSION) {  //6.3.11 版本是张图片，所以用id来获取
                 list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/b43");
-            } else {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-                    list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/b2c");
-                }
-                if(list == null || list.isEmpty()) {
+            } else {    //6.3.9，6.3.10 是另一个id
+                list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/b2c");
+                if(list == null || list.isEmpty()) {    //实在不行就找“给你发了一个红包”上面的那个按钮
                     List<AccessibilityNodeInfo> l = nodeInfo.findAccessibilityNodeInfosByText("给你发了一个红包");
                     if(l != null && !l.isEmpty()) {
                         AccessibilityNodeInfo p = l.get(0).getParent();
@@ -218,37 +223,37 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
             return;
         }
 
-        List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText("领取红包");
+        List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText("领取红包");   //从聊天列表查找红包
 
-        if(list != null && list.isEmpty()) {
-            Log.e("list.isEmpty()","---");
-            // 从消息列表查找红包
-            list = nodeInfo.findAccessibilityNodeInfosByText("微信红包");
-            Log.e("查找-微信红包","---"+list.toString());
+        if(list != null && list.isEmpty()) {    // 从消息列表查找红包
+            list = nodeInfo.findAccessibilityNodeInfosByText("[微信红包]");
             if(list == null || list.isEmpty()) {
                 return;
             }
-
             for(AccessibilityNodeInfo n : list) {
                 if(BuildConfig.DEBUG) {
-                    Log.i(TAG, "-->微信红包:" + n);
+                    Log.i(TAG, "-->【微信红包】:" + n);
                 }
                 n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                break;
+                return;
             }
-        } else if(list != null) {
-            Log.e("查找-领取红包","---"+list.toString());
-            //最新的红包领起
-            for(int i = list.size() - 1; i >= 0; i --) {
+        }
+        if (list != null) {//最新的红包领起
+            for (int i = list.size() - 1; i >= 0; i--) {
                 AccessibilityNodeInfo parent = list.get(i).getParent();
-                if(BuildConfig.DEBUG) {
+                if (BuildConfig.DEBUG) {
                     Log.i(TAG, "-->领取红包:" + parent);
                 }
-                if(parent != null) {
-                    Log.e("isFirstChecked","---"+isFirstChecked);
-                    if (isFirstChecked){
+                if (parent != null) {
+                    String hbDesc = list.get(i).getViewIdResourceName();
+                    String hbName = hbDesc.substring(0, hbDesc.indexOf(';'));
+                    hasChecked = hasCheckedList.contains(hbName);
+                    Log.e("hasChecked", "---" + hasChecked+"==="+hbName);
+                    if (!hasChecked) {
                         parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                        isFirstChecked = false;
+                        hasCheckedList.add(hbName);
+                    } else {
+                        continue;
                     }
                     break;
                 }

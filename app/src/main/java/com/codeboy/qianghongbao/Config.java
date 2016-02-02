@@ -3,6 +3,8 @@ package com.codeboy.qianghongbao;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import java.util.ArrayList;
+
 /**
  * <p>Created 16/1/15 下午10:59.</p>
  * <p><a href="mailto:codeboy2013@gmail.com">Email:codeboy2013@gmail.com</a></p>
@@ -53,4 +55,6 @@ public class Config {
         } catch (Exception e) {}
         return defaultValue;
     }
+
+
 }
