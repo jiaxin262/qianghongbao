@@ -1,10 +1,12 @@
 package com.codeboy.qianghongbao.job;
 
 import android.annotation.TargetApi;
+import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
@@ -12,6 +14,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -49,7 +52,6 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     private PackageInfo mWechatPackageInfo = null;
     private Handler mHandler = null;
 
-    private static ArrayList<String> hasCheckedList;
 
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -62,8 +64,6 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     @Override
     public void onCreateJob(QiangHongBaoService service) {
         super.onCreateJob(service);
-        hasCheckedList = new ArrayList<>();
-
         updatePackageInfo();
 
         IntentFilter filter = new IntentFilter();
@@ -139,11 +139,12 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
             handleLuckyMoneyReceive();
         } else if("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyDetailUI".equals(event.getClassName())) {
             //拆完红包后看详细的纪录界面
-            //nonething
-        } else if("com.tencent.mm.ui.LauncherUI".equals(event.getClassName())
-                || "android.widget.ListView".equals(event.getClassName())   //聊天室页
-                || "android.widget.TextView".equals(event.getClassName())) {    //聊天列表页
-            //在聊天列表或聊天界面,去点中红包
+            handleLuckyMoneyDetail();
+        } else if("com.tencent.mm.ui.LauncherUI".equals(event.getClassName())) {    //从微信外进入微信
+            handleChatListHongBao();
+        } else if("android.widget.ListView".equals(event.getClassName())) { //列表进聊天室页,聊天室更新消息
+            handleChatListHongBao();
+        } else if ("android.widget.TextView".equals(event.getClassName())) { //聊天室返回列表页
             handleChatListHongBao();
         }
     }
@@ -213,6 +214,34 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     }
 
     /**
+     * 拆完红包的记录详情
+     * */
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
+    private void handleLuckyMoneyDetail() {
+        hasChecked = false;
+        AccessibilityNodeInfo nodeInfo = getService().getRootInActiveWindow();
+        if(nodeInfo == null) {
+            Log.w(TAG, "rootWindow为空");
+            return;
+        }
+
+        List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/cd9");    //记录页的返回按钮
+
+        if (list != null && !list.isEmpty()) {
+            AccessibilityNodeInfo parent = list.get(0).getParent();
+            final AccessibilityNodeInfo p = parent;
+            if (parent != null) {
+                getHandler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        p.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                    }
+                }, 800);
+            }
+        }
+    }
+
+    /**
      * 收到聊天里的红包
      * */
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
@@ -245,13 +274,10 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
                     Log.i(TAG, "-->领取红包:" + parent);
                 }
                 if (parent != null) {
-                    String hbDesc = list.get(i).getViewIdResourceName();
-                    String hbName = hbDesc.substring(0, hbDesc.indexOf(';'));
-                    hasChecked = hasCheckedList.contains(hbName);
-                    Log.e("hasChecked", "---" + hasChecked+"==="+hbName);
+                    Log.e("hasChecked", "---" + hasChecked);
                     if (!hasChecked) {
                         parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                        hasCheckedList.add(hbName);
+                        hasChecked = true;
                     } else {
                         continue;
                     }

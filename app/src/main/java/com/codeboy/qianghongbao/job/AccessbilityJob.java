@@ -1,5 +1,6 @@
 package com.codeboy.qianghongbao.job;
 
+import android.content.Context;
 import android.view.accessibility.AccessibilityEvent;
 
 import com.codeboy.qianghongbao.QiangHongBaoService;
