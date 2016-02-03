@@ -45,13 +45,13 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
 
     /** 不能再使用文字匹配的最小版本号 */
     private static final int USE_ID_MIN_VERSION = 700;// 6.3.8 对应code为680,6.3.9对应code为700
-    /** 目前最新版本号 */
-    private static final int USE_ID_NOW_VERSION = 720;// 6.3.11 对应code为720
+    private static final int USE_ID_6311_VERSION = 720;// 6.3.11 对应code为720
+    private static final int USE_ID_6313_VERSION = 740;// 6.3.11 对应code为720
 
     private boolean hasChecked;
     private PackageInfo mWechatPackageInfo = null;
     private Handler mHandler = null;
-
+    private ArrayList<String> hasCheckedList;
 
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -65,6 +65,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     public void onCreateJob(QiangHongBaoService service) {
         super.onCreateJob(service);
         updatePackageInfo();
+        hasCheckedList = new ArrayList<>();
 
         IntentFilter filter = new IntentFilter();
         filter.addDataScheme("package");
@@ -124,7 +125,6 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         Notification notification = (Notification) event.getParcelableData();
         PendingIntent pendingIntent = notification.contentIntent;
 
-        hasChecked = false;
         try {
             pendingIntent.send();
         } catch (Exception e) {
@@ -167,7 +167,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         if(event == Config.WX_AFTER_OPEN_HONGBAO) { //拆红包
             if (getWechatVersion() < USE_ID_MIN_VERSION) {  //6.3.9 版本下是“拆红包”三个字
                 list = nodeInfo.findAccessibilityNodeInfosByText("拆红包");
-            } else if (getWechatVersion() == USE_ID_NOW_VERSION) {  //6.3.11 版本是张图片，所以用id来获取
+            } else if (getWechatVersion() == USE_ID_6311_VERSION) {  //6.3.11 版本是张图片，所以用id来获取
                 list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/b43");
             } else {    //6.3.9，6.3.10 是另一个id
                 list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/b2c");
@@ -218,7 +218,6 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
      * */
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
     private void handleLuckyMoneyDetail() {
-        hasChecked = false;
         AccessibilityNodeInfo nodeInfo = getService().getRootInActiveWindow();
         if(nodeInfo == null) {
             Log.w(TAG, "rootWindow为空");
@@ -227,6 +226,9 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
 
         List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/cd9");    //记录页的返回按钮
 
+        if (getWechatVersion() == USE_ID_6313_VERSION) {
+            list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/cdh");
+        }
         if (list != null && !list.isEmpty()) {
             AccessibilityNodeInfo parent = list.get(0).getParent();
             final AccessibilityNodeInfo p = parent;
@@ -236,7 +238,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
                     public void run() {
                         p.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                     }
-                }, 800);
+                }, 300);
             }
         }
     }
@@ -252,7 +254,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
             return;
         }
 
-        List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText("领取红包");   //从聊天列表查找红包
+        List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText("领取红包");   //从聊天室查找红包
 
         if(list != null && list.isEmpty()) {    // 从消息列表查找红包
             list = nodeInfo.findAccessibilityNodeInfosByText("[微信红包]");
@@ -267,22 +269,27 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
                 return;
             }
         }
-        if (list != null) {//最新的红包领起
-            for (int i = list.size() - 1; i >= 0; i--) {
+        if (list != null) {//只领最后一个
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i <list.size(); i++) {
                 AccessibilityNodeInfo parent = list.get(i).getParent();
-                if (BuildConfig.DEBUG) {
-                    Log.i(TAG, "-->领取红包:" + parent);
-                }
-                if (parent != null) {
-                    Log.e("hasChecked", "---" + hasChecked);
-                    if (!hasChecked) {
-                        parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                        hasChecked = true;
-                    } else {
-                        continue;
-                    }
+                String hbText = parent.getChild(0).getText().toString();
+                String hbDesc = list.get(i).toString();
+                String hbName = hbDesc.substring(0, hbDesc.indexOf(';'));
+                sb.append(hbText).append("+").append(hbName);
+                if (!hasCheckedList.contains(sb.toString())) {
+                    //说明有新红包 （由于AccessibilityNodeInfo的实例分配策略，新红包的id并不是新增的那个id，所以取最底下的那个红包就对了）
+                    hasChecked = false;
+                    hasCheckedList.add(sb.toString());
+                    sb.setLength(0);
                     break;
+                } else {
+                    hasChecked = true;
                 }
+            }
+            AccessibilityNodeInfo parent = list.get(list.size()-1).getParent();
+            if (!hasChecked) {
+                parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             }
         }
     }
