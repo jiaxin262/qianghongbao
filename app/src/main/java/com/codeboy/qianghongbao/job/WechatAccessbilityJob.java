@@ -133,7 +133,6 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private void openHongBao(AccessibilityEvent event) {
-        Log.e("event.getClassName()", "---"+event.getClassName());
         if("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyReceiveUI".equals(event.getClassName())) {
             //点中了红包，下一步就是去拆红包
             handleLuckyMoneyReceive();
@@ -231,6 +230,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
             AccessibilityNodeInfo parent = list.get(0).getParent();
             final AccessibilityNodeInfo p = parent;
             long sReturnTime = getConfig().getWechatReturnTime();
+            Log.e("returntime","--"+sReturnTime);
             if (parent != null) {
                 getHandler().postDelayed(new Runnable() {
                     @Override

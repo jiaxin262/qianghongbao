@@ -8,7 +8,7 @@
             android:key="KEY_ENABLE_WECHAT"/>
 
         <EditTextPreference
-            android:title="设置延迟拆红包时间(默认500ms)"
+            android:title="设置延迟拆红包时间(500ms很安全)"
             android:defaultValue="0"
             android:key="KEY_WECHAT_DELAY_TIME"
             android:inputType="number"
@@ -16,7 +16,7 @@
             android:hint="单位毫秒(1秒=1000毫秒)"/>
 
         <EditTextPreference
-            android:title="设置从红包详情返回时间（默认200ms）"
+            android:title="设置从红包详情返回时间"
             android:defaultValue="0"
             android:key="KEY_WECHAT_RETURN_TIME"
             android:inputType="number"

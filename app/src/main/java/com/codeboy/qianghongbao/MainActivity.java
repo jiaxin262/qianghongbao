@@ -27,6 +27,7 @@ import android.widget.Toast;
  */
 public class MainActivity extends BaseActivity {
 
+    public Context context = this;
     private Dialog mTipsDialog;
 
     @Override
@@ -182,16 +183,6 @@ public class MainActivity extends BaseActivity {
             });
             String delay = delayEditTextPre.getText();
             if("0".equals(String.valueOf(delay))) {
-                android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(getContext());
-                builder.setTitle("强烈建议设置延时!!!");
-                builder.setMessage("不然很容易被微信查到");
-                builder.setPositiveButton("好，我去设置", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                    }
-                });
-                builder.create().show();
                 delayEditTextPre.setSummary("");
             } else {
                 delayEditTextPre.setSummary("已延时" + delay  + "毫秒");
@@ -212,9 +203,9 @@ public class MainActivity extends BaseActivity {
             });
             String returnTime = returnEditTextPre.getText();
             if("0".equals(String.valueOf(returnTime))) {
-                delayEditTextPre.setSummary("");
+                returnEditTextPre.setSummary("");
             } else {
-                delayEditTextPre.setSummary(returnTime  + "毫秒后从红包详情返回");
+                returnEditTextPre.setSummary(returnTime  + "毫秒后从红包详情返回");
             }
         }
     }
