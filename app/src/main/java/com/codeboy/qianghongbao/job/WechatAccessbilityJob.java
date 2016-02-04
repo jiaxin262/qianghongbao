@@ -186,9 +186,9 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
                 }
             }
         } else if(event == Config.WX_AFTER_OPEN_SEE) { //看一看
-            if(getWechatVersion() < USE_ID_MIN_VERSION) { //低版本才有 看大家手气的功能
-                list = nodeInfo.findAccessibilityNodeInfosByText("看看大家的手气");
-            }
+//            if(getWechatVersion() < USE_ID_MIN_VERSION) { //低版本才有 看大家手气的功能
+//                list = nodeInfo.findAccessibilityNodeInfosByText("看看大家的手气");
+//            }
         }
 
         if(list != null && !list.isEmpty()) {

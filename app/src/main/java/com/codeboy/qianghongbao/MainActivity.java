@@ -154,17 +154,17 @@ public class MainActivity extends BaseActivity {
             });
 
             //打开微信红包后
-            final ListPreference wxAfterOpenPre = (ListPreference) findPreference(Config.KEY_WECHAT_AFTER_OPEN_HONGBAO);
-            wxAfterOpenPre.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                @Override
-                public boolean onPreferenceChange(Preference preference, Object newValue) {
-                    int value = Integer.parseInt(String.valueOf(newValue));
-                    preference.setSummary(wxAfterOpenPre.getEntries()[value]);
-                    return true;
-                }
-            });
-            int value = Integer.parseInt(wxAfterOpenPre.getValue());
-            wxAfterOpenPre.setSummary(wxAfterOpenPre.getEntries()[value]);
+//            final ListPreference wxAfterOpenPre = (ListPreference) findPreference(Config.KEY_WECHAT_AFTER_OPEN_HONGBAO);
+//            wxAfterOpenPre.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+//                @Override
+//                public boolean onPreferenceChange(Preference preference, Object newValue) {
+//                    int value = Integer.parseInt(String.valueOf(newValue));
+//                    preference.setSummary(wxAfterOpenPre.getEntries()[value]);
+//                    return true;
+//                }
+//            });
+//            int value = Integer.parseInt(wxAfterOpenPre.getValue());
+//            wxAfterOpenPre.setSummary(wxAfterOpenPre.getEntries()[value]);
 
             final EditTextPreference delayEditTextPre = (EditTextPreference) findPreference(Config.KEY_WECHAT_DELAY_TIME);
             delayEditTextPre.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
