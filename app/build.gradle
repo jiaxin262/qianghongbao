@@ -8,8 +8,8 @@ android {
         applicationId "com.codeboy.qianghongbao"
         minSdkVersion 18
         targetSdkVersion 21
-        versionCode 201
-        versionName "2.0.1"
+        versionCode 1
+        versionName "1.0.0"
     }
     buildTypes {
         release {
