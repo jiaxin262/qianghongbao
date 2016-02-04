@@ -230,13 +230,14 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         if (list != null && !list.isEmpty()) {
             AccessibilityNodeInfo parent = list.get(0).getParent();
             final AccessibilityNodeInfo p = parent;
+            long sReturnTime = getConfig().getWechatReturnTime();
             if (parent != null) {
                 getHandler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         p.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                     }
-                }, 200);
+                }, sReturnTime);
             }
         }
     }

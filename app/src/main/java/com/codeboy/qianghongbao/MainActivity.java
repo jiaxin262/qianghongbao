@@ -12,6 +12,7 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.support.v7.app.AlertDialog;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -166,6 +167,7 @@ public class MainActivity extends BaseActivity {
 //            int value = Integer.parseInt(wxAfterOpenPre.getValue());
 //            wxAfterOpenPre.setSummary(wxAfterOpenPre.getEntries()[value]);
 
+            //拆红包延时
             final EditTextPreference delayEditTextPre = (EditTextPreference) findPreference(Config.KEY_WECHAT_DELAY_TIME);
             delayEditTextPre.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
                 @Override
@@ -180,9 +182,39 @@ public class MainActivity extends BaseActivity {
             });
             String delay = delayEditTextPre.getText();
             if("0".equals(String.valueOf(delay))) {
+                android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(getContext());
+                builder.setTitle("强烈建议设置延时!!!");
+                builder.setMessage("不然很容易被微信查到");
+                builder.setPositiveButton("好，我去设置", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+                builder.create().show();
                 delayEditTextPre.setSummary("");
             } else {
                 delayEditTextPre.setSummary("已延时" + delay  + "毫秒");
+            }
+
+            //红包详情返回时间
+            final EditTextPreference returnEditTextPre = (EditTextPreference) findPreference(Config.KEY_WECHAT_RETURN_TIME);
+            returnEditTextPre.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                @Override
+                public boolean onPreferenceChange(Preference preference, Object newValue) {
+                    if ("0".equals(String.valueOf(newValue))) {
+                        preference.setSummary("");
+                    } else {
+                        preference.setSummary(newValue + "毫秒后从红包详情返回");
+                    }
+                    return true;
+                }
+            });
+            String returnTime = returnEditTextPre.getText();
+            if("0".equals(String.valueOf(returnTime))) {
+                delayEditTextPre.setSummary("");
+            } else {
+                delayEditTextPre.setSummary(returnTime  + "毫秒后从红包详情返回");
             }
         }
     }
