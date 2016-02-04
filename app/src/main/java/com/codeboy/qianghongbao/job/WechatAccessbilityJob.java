@@ -21,6 +21,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 
 import com.codeboy.qianghongbao.BuildConfig;
 import com.codeboy.qianghongbao.Config;
+import com.codeboy.qianghongbao.HongbaoSignature;
 import com.codeboy.qianghongbao.QiangHongBaoService;
 
 import java.util.ArrayList;
@@ -48,11 +49,9 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     private static final int USE_ID_6311_VERSION = 720;// 6.3.11 对应code为720
     private static final int USE_ID_6313_VERSION = 740;// 6.3.11 对应code为720
 
-    private boolean hasChecked;
     private PackageInfo mWechatPackageInfo = null;
     private Handler mHandler = null;
-    private ArrayList<String> hasCheckedList;
-
+    private HongbaoSignature signature = new HongbaoSignature();
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -65,7 +64,6 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     public void onCreateJob(QiangHongBaoService service) {
         super.onCreateJob(service);
         updatePackageInfo();
-        hasCheckedList = new ArrayList<>();
 
         IntentFilter filter = new IntentFilter();
         filter.addDataScheme("package");
@@ -120,7 +118,8 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         if(event.getParcelableData() == null || !(event.getParcelableData() instanceof Notification)) {
             return;
         }
-
+         /* 清除signature,避免进入会话后误判 */
+        signature.cleanSignature();
         //以下是精华，将微信的通知栏消息打开
         Notification notification = (Notification) event.getParcelableData();
         PendingIntent pendingIntent = notification.contentIntent;
@@ -134,17 +133,16 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private void openHongBao(AccessibilityEvent event) {
+        Log.e("event.getClassName()", "---"+event.getClassName());
         if("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyReceiveUI".equals(event.getClassName())) {
             //点中了红包，下一步就是去拆红包
             handleLuckyMoneyReceive();
         } else if("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyDetailUI".equals(event.getClassName())) {
             //拆完红包后看详细的纪录界面
             handleLuckyMoneyDetail();
-        } else if("com.tencent.mm.ui.LauncherUI".equals(event.getClassName())) {    //从微信外进入微信
-            handleChatListHongBao();
-        } else if("android.widget.ListView".equals(event.getClassName())) { //列表进聊天室页,聊天室更新消息
-            handleChatListHongBao();
-        } else if ("android.widget.TextView".equals(event.getClassName())) { //聊天室返回列表页
+        } else if("com.tencent.mm.ui.LauncherUI".equals(event.getClassName()) ||    //从微信外进入微信
+                "android.widget.ListView".equals(event.getClassName()) ||   //列表进聊天室页,聊天室更新消息
+                "android.widget.TextView".equals(event.getClassName())) {    //聊天室返回列表页
             handleChatListHongBao();
         }
     }
@@ -238,7 +236,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
                     public void run() {
                         p.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                     }
-                }, 300);
+                }, 200);
             }
         }
     }
@@ -270,25 +268,8 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
             }
         }
         if (list != null) {//只领最后一个
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i <list.size(); i++) {
-                AccessibilityNodeInfo parent = list.get(i).getParent();
-                String hbText = parent.getChild(0).getText().toString();
-                String hbDesc = list.get(i).toString();
-                String hbName = hbDesc.substring(0, hbDesc.indexOf(';'));
-                sb.append(hbText).append("+").append(hbName);
-                if (!hasCheckedList.contains(sb.toString())) {
-                    //说明有新红包 （由于AccessibilityNodeInfo的实例分配策略，新红包的id并不是新增的那个id，所以取最底下的那个红包就对了）
-                    hasChecked = false;
-                    hasCheckedList.add(sb.toString());
-                    sb.setLength(0);
-                    break;
-                } else {
-                    hasChecked = true;
-                }
-            }
             AccessibilityNodeInfo parent = list.get(list.size()-1).getParent();
-            if (!hasChecked) {
+            if (this.signature.generateSignature(list.get(list.size()-1), "")) {
                 parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             }
         }
